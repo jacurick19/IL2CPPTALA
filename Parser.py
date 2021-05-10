@@ -73,7 +73,7 @@ def getMethodNames(path, start, count):
         #the fourth int, the ParamaterIndex parameterStart,
         #and the 10th, the 2 byte paramaterCount
 
-        for i in range(count):
+        for i in range(int(count/32)):
             method = []
             method.append(int.from_bytes(reader.read(4), byteorder='little'))
             method.append(int.from_bytes(reader.read(4), byteorder='little'))
