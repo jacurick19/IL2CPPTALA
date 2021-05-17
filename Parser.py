@@ -12,39 +12,143 @@ import sys
 from varname import nameof
 
 
-#checks the sanity check bytes
+
+#checks for obfuscation
 def checkForObfuscation(filename):
     header = []
+    obfuscated = False
     with open(filename, "rb") as f:
         chunk = f.read(4)
         for b in chunk:
             header.append(b)
         sanity = int.from_bytes(header, byteorder = 'little')
-        if(hex(sanity) == "0xfab11baf"):
-            return False
-        return True
+        if(hex(sanity) != "0xfab11baf"):
+            obfuscated = True
+        version = checkVersion(filename)
+        if version > 30 or version < 1:
+            obfuscated = True
+        if not verifySigniture(filename, version):
+            obfuscated = True
+        return obfuscated
 #checks the version
 def checkVersion(filename):
-    header = []
-    with open(filename, "rb") as f:
-        chunk = f.read(8)
-        for b in chunk:
-            header.append(b)
-        del header[0:4]
-        version = int.from_bytes(header, byteorder = 'little')
-        return version
+    with open(filename, "rb") as reader:
+        sanity = int.from_bytes(reader.read(4), byteorder='little')
+        version = int.from_bytes(reader.read(4), byteorder='little')
+        stringLiteralOffset = int.from_bytes(reader.read(4), byteorder='little')             #         string data for managed code
+        stringLiteralCount = int.from_bytes(reader.read(4), byteorder='little')
+        stringLiteralDataOffset = int.from_bytes(reader.read(4), byteorder='little')
+        stringLiteralDataCount = int.from_bytes(reader.read(4), byteorder='little')
+        stringOffset = int.from_bytes(reader.read(4), byteorder='little')             #         string data for metadata
+        stringCount = int.from_bytes(reader.read(4), byteorder='little')
+        eventsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppEventDefinition
+        eventsCount = int.from_bytes(reader.read(4), byteorder='little')
+        propertiesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppPropertyDefinition
+        propertiesCount = int.from_bytes(reader.read(4), byteorder='little')
+        methodsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppMethodDefinition
+        methodsCount = int.from_bytes(reader.read(4), byteorder='little')
+        parameterDefaultValuesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppParameterDefaultValue
+        parameterDefaultValuesCount = int.from_bytes(reader.read(4), byteorder='little')
+        fieldDefaultValuesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppFieldDefaultValue
+        fieldDefaultValuesCount = int.from_bytes(reader.read(4), byteorder='little')
+        fieldAndParameterDefaultValueDataOffset = int.from_bytes(reader.read(4), byteorder='little')             #         uint8_t
+        fieldAndParameterDefaultValueDataCount = int.from_bytes(reader.read(4), byteorder='little')
+        fieldMarshaledSizesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppFieldMarshaledSize
+        fieldMarshaledSizesCount = int.from_bytes(reader.read(4), byteorder='little')
+        parametersOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppParameterDefinition
+        parametersCount = int.from_bytes(reader.read(4), byteorder='little')
+        fieldsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppFieldDefinition
+        fieldsCount = int.from_bytes(reader.read(4), byteorder='little')
+        genericParametersOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppGenericParameter
+        genericParametersCount = int.from_bytes(reader.read(4), byteorder='little')
+        genericParameterConstraintsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         TypeIndex
+        genericParameterConstraintsCount = int.from_bytes(reader.read(4), byteorder='little')
+        genericContainersOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppGenericContainer
+        genericContainersCount = int.from_bytes(reader.read(4), byteorder='little')
+        nestedTypesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         TypeDefinitionIndex
+        nestedTypesCount = int.from_bytes(reader.read(4), byteorder='little')                             #
+        interfacesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         TypeIndex
+        interfacesCount = int.from_bytes(reader.read(4), byteorder='little')
+        vtableMethodsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         EncodedMethodIndex
+        vtableMethodsCount = int.from_bytes(reader.read(4), byteorder='little')
+        interfaceOffsetsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppInterfaceOffsetPair
+        interfaceOffsetsCount = int.from_bytes(reader.read(4), byteorder='little')
+        typeDefinitionsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppTypeDefinition
+        typeDefinitionsCount = int.from_bytes(reader.read(4), byteorder='little')
+        imagesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppImageDefinition
+        imagesCount = int.from_bytes(reader.read(4), byteorder='little')
+        assembliesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppAssemblyDefinition
+        assembliesCount = int.from_bytes(reader.read(4), byteorder='little')
+        fieldRefsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppFieldRef
+        fieldRefsCount = int.from_bytes(reader.read(4), byteorder='little')
+        referencedAssembliesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         int32_t
+        referencedAssembliesCount = int.from_bytes(reader.read(4), byteorder='little')
+        attributesInfoOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppCustomAttributeTypeRange
+        attributesInfoCount = int.from_bytes(reader.read(4), byteorder='little')
+        attributeTypesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         TypeIndex
+        attributeTypesCount = int.from_bytes(reader.read(4), byteorder='little')
+        unresolvedVirtualCallParameterTypesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         TypeIndex
+        unresolvedVirtualCallParameterTypesCount = int.from_bytes(reader.read(4), byteorder='little')
+        unresolvedVirtualCallParameterRangesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppMetadataRange
+        unresolvedVirtualCallParameterRangesCount = int.from_bytes(reader.read(4), byteorder='little')
+        windowsRuntimeTypeNamesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppWindowsRuntimeTypeNamePair
+        windowsRuntimeTypeNamesSize = int.from_bytes(reader.read(4), byteorder='little')
+        windowsRuntimeStringsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         const char*
+        windowsRuntimeStringsSize = int.from_bytes(reader.read(4), byteorder='little')                    #
+        exportedTypeDefinitionsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         TypeDefinitionIndex
+        exportedTypeDefinitionsCount = int.from_bytes(reader.read(4), byteorder='little') #typeDefinitionIndex
+    if version == 24:
+        if stringLiteralOffset == 264:
+            version = 24.2
+        elif isVersion24point1(filename):
+            version = 24.1
+    return version
 #Given an open & readble file, read bytes until a null byte is found
 def readUntilNullByte(file):
     word = []
     while True:
         b = file.read(1)
         #Ignore errors for now
-        b = b.decode("utf-8", errors="ignore")
-        if b != '\0' and b!= '':
+        try:
+            b = b.decode("utf-8", errors="strict")
+        except UnicodeError:
+            print("There has been an error trying to parse " + file.name)
+        if b != '\0':
             word.append(b)
         else:
             break
     return word
+
+#verify that.ctor, the IL constructor, is the first method listed.
+def verifySigniture(path, version):
+    with open(path, 'rb') as reader:
+        #read header up to the methodsOffset
+        sanity = int.from_bytes(reader.read(4), byteorder='little')
+        version = int.from_bytes(reader.read(4), byteorder='little')
+        stringLiteralOffset = int.from_bytes(reader.read(4), byteorder='little')             #         string data for managed code
+        stringLiteralCount = int.from_bytes(reader.read(4), byteorder='little')
+        stringLiteralDataOffset = int.from_bytes(reader.read(4), byteorder='little')
+        stringLiteralDataCount = int.from_bytes(reader.read(4), byteorder='little')
+        stringOffset = int.from_bytes(reader.read(4), byteorder='little')             #         string data for metadata
+        stringCount = int.from_bytes(reader.read(4), byteorder='little')
+        eventsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppEventDefinition
+        eventsCount = int.from_bytes(reader.read(4), byteorder='little')
+        propertiesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppPropertyDefinition
+        propertiesCount = int.from_bytes(reader.read(4), byteorder='little')
+        methodsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppMethodDefinition
+        methodsCount = int.from_bytes(reader.read(4), byteorder='little')
+        version = checkVersion(path)
+        #Move the reading location to the first method
+        methods = getMethodNames(path, methodsOffset, methodsCount, version)
+        #Check that there is a constructor in the first few thousand bytes of method structs
+        names = []
+        for method in methods:
+            reader.seek(stringOffset + method[0], 0)
+            name = readUntilNullByte(reader)
+            if ['.', 'c', 't', 'o', 'r'] == name:
+                return True
+        return False
+
 
 #Given a list and an open & writable file, write the list contents
 def writeList(lst, file):
@@ -52,29 +156,55 @@ def writeList(lst, file):
         file.write(lst[i])
     file.write("\n")
 #Get method names from file
-def getMethodNames(path, start, count):
+def getMethodNames(path, start, count, version):
     methods = []
     with open(path, 'rb') as reader:
         #Move reading location to the start of the structs
         reader.seek(start, 0)
         #We now read in count many IL2CPPMethodDefinition structs
-        #These are 32 bytes
+        #These are 32 bytes in version 27, 52 bytes in a previous version
         #I only care about the first int, the StringIndex nameIndex,
         #The second int, the TypeDefinitionIndex declaringType,
         #the third int, the TypeIndex returnType, and
         #the fourth int, the ParamaterIndex parameterStart,
-        #and the 10th, the 2 byte paramaterCount
-
-        for i in range(int(count/32)):
-            method = []
-            method.append(int.from_bytes(reader.read(4), byteorder='little'))
-            method.append(int.from_bytes(reader.read(4), byteorder='little'))
-            method.append(int.from_bytes(reader.read(4), byteorder='little'))
-            method.append(int.from_bytes(reader.read(4), byteorder='little'))
-            #Move 14 bytes forward
-            reader.seek(14, 1)
-            method.append(int.from_bytes(reader.read(2), byteorder='little'))
-            methods.append(method)
+        #and the last, the 2 byte paramaterCount
+        print("The version being checked is " + str(version))
+        if version > 24.1:
+            Il2CppMethodDefinitionSize = 32
+            for i in range(int(count/Il2CppMethodDefinitionSize)):
+                method = []
+                method.append(int.from_bytes(reader.read(4), byteorder='little'))
+                method.append(int.from_bytes(reader.read(4), byteorder='little'))
+                method.append(int.from_bytes(reader.read(4), byteorder='little'))
+                method.append(int.from_bytes(reader.read(4), byteorder='little'))
+                #Move 14 bytes forward
+                reader.seek(14, 1)
+                method.append(int.from_bytes(reader.read(2), byteorder='little'))
+                methods.append(method)
+        if version == 24:
+            Il2CppMethodDefinitionSize = 56
+            for i in range(int(count/Il2CppMethodDefinitionSize)):
+                method = []
+                method.append(int.from_bytes(reader.read(4), byteorder='little'))
+                method.append(int.from_bytes(reader.read(4), byteorder='little'))
+                method.append(int.from_bytes(reader.read(4), byteorder='little'))
+                method.append(int.from_bytes(reader.read(4), byteorder='little'))
+                #Move 38 bytes forward
+                reader.seek(38, 1)
+                method.append(int.from_bytes(reader.read(2), byteorder='little'))
+                methods.append(method)
+        if version == 24.1:
+            Il2CppMethodDefinitionSize = 52
+            for i in range(int(count/Il2CppMethodDefinitionSize)):
+                method = []
+                method.append(int.from_bytes(reader.read(4), byteorder='little'))
+                method.append(int.from_bytes(reader.read(4), byteorder='little'))
+                method.append(int.from_bytes(reader.read(4), byteorder='little'))
+                method.append(int.from_bytes(reader.read(4), byteorder='little'))
+                #Move 34 bytes forward
+                reader.seek(34, 1)
+                method.append(int.from_bytes(reader.read(2), byteorder='little'))
+                methods.append(method)
     return methods
 
 #Get method names from file
@@ -215,39 +345,81 @@ def outputMethods(paths):
             windowsRuntimeStringsSize = int.from_bytes(reader.read(4), byteorder='little')                    #
             exportedTypeDefinitionsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         TypeDefinitionIndex
             exportedTypeDefinitionsCount = int.from_bytes(reader.read(4), byteorder='little') #typeDefinitionIndex
-            methods = getMethodNames(path, methodsOffset, methodsCount)
-            types = {}
+            methods = getMethodNames(path, methodsOffset, methodsCount, checkVersion(path))
             with open("Methods_"+str(path[2:7])+".txt", "w") as methodFile:
-                with open("Method_types_"+str(path[2:7])+".txt", "w") as typesFile:
-                    #Move location to the method string name
-                    with open(path, 'rb') as reader:
-                        for i in range(len(methods)):
-                            reader.seek(typeDefinitionsOffset + methods[i][1]*22*4,0)
-                            stringIdx = int.from_bytes(reader.read(4), byteorder='little')
-
-                            reader.seek(stringOffset + stringIdx)
-                            type = readUntilNullByte(reader)
-                            type = listToString(type)
-                            reader.seek(stringOffset + methods[i][0], 0)
-                            method = readUntilNullByte(reader)
-                            method = listToString(method)
-                            if type in types.keys():
-                                if types[type] is not None:
-                                    types[type] = types[type].add(method)
-                            else:
-                                functions = set()
-                                functions.add(method)
-                                types[type] = functions
-                        writeDictionaryToFile(types, "MethodsWithTypes.txt")
+                #Move location to the method string name
+                with open(path, 'rb') as reader:
+                    for i in range(len(methods)):
+                        reader.seek(stringOffset + methods[i][0], 0)
+                        writeList(readUntilNullByte(reader),methodFile)
 def writeDictionaryToFile(dictionary, path):
     with open(path, 'w') as writer:
         for key in dictionary.keys():
             if key is not None:
                 writer.write(key + "\n")
                 val = dictionary[key]
-                for x in val:
-                    if x is not None:
-                        writer.write(x + "\n")
+                if val is not None:
+                    for x in val:
+                        if x is not None:
+                            writer.write(x + "\n")
+#Given a version 24.0 or 24.1 metadata file, this returns false if the image definitions tell us
+#we have a version 24.0 and returns true if we have version 24.1
+def isVersion24point1(path):
+    #the Il2CppImageDefinition struct is 32 bytes in version 24, and 40 bytes in version 24.1
+    #In the file, Il2CppAssemblyDefinition structs are listed right after the Il2CppImageDefinition typeStructs
+    #It follows that we can check if the total length of the image definitions(Assuming 40 byte structs!) is greater than
+    #the offet that should give us an assembly.
+     with open(path, 'rb') as reader:
+        sanity = int.from_bytes(reader.read(4), byteorder='little')
+        version = int.from_bytes(reader.read(4), byteorder='little')
+        stringLiteralOffset = int.from_bytes(reader.read(4), byteorder='little')             #         string data for managed code
+        stringLiteralCount = int.from_bytes(reader.read(4), byteorder='little')
+        stringLiteralDataOffset = int.from_bytes(reader.read(4), byteorder='little')
+        stringLiteralDataCount = int.from_bytes(reader.read(4), byteorder='little')
+        stringOffset = int.from_bytes(reader.read(4), byteorder='little')             #         string data for metadata
+        tringCount = int.from_bytes(reader.read(4), byteorder='little')
+        eventsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppEventDefinition
+        eventsCount = int.from_bytes(reader.read(4), byteorder='little')
+        propertiesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppPropertyDefinition
+        propertiesCount = int.from_bytes(reader.read(4), byteorder='little')
+        methodsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppMethodDefinition
+        methodsCount = int.from_bytes(reader.read(4), byteorder='little')
+        arameterDefaultValuesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppParameterDefaultValue
+        parameterDefaultValuesCount = int.from_bytes(reader.read(4), byteorder='little')
+        fieldDefaultValuesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppFieldDefaultValue
+        fieldDefaultValuesCount = int.from_bytes(reader.read(4), byteorder='little')
+        fieldAndParameterDefaultValueDataOffset = int.from_bytes(reader.read(4), byteorder='little')             #         uint8_t
+        ieldAndParameterDefaultValueDataCount = int.from_bytes(reader.read(4), byteorder='little')
+        fieldMarshaledSizesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppFieldMarshaledSize
+        fieldMarshaledSizesCount = int.from_bytes(reader.read(4), byteorder='little')
+        parametersOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppParameterDefinition
+        parametersCount = int.from_bytes(reader.read(4), byteorder='little')
+        fieldsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppFieldDefinition
+        fieldsCount = int.from_bytes(reader.read(4), byteorder='little')
+        genericParametersOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppGenericParameter
+        genericParametersCount = int.from_bytes(reader.read(4), byteorder='little')
+        genericParameterConstraintsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         TypeIndex
+        genericParameterConstraintsCount = int.from_bytes(reader.read(4), byteorder='little')
+        enericContainersOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppGenericContainer
+        genericContainersCount = int.from_bytes(reader.read(4), byteorder='little')
+        nestedTypesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         TypeDefinitionIndex
+        nestedTypesCount = int.from_bytes(reader.read(4), byteorder='little')                             #
+        interfacesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         TypeIndex
+        interfacesCount = int.from_bytes(reader.read(4), byteorder='little')
+        vtableMethodsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         EncodedMethodIndex
+        vtableMethodsCount = int.from_bytes(reader.read(4), byteorder='little')
+        interfaceOffsetsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppInterfaceOffsetPair
+        interfaceOffsetsCount = int.from_bytes(reader.read(4), byteorder='little')
+        typeDefinitionsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppTypeDefinition
+        typeDefinitionsCount = int.from_bytes(reader.read(4), byteorder='little')
+        imagesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppImageDefinition
+        imagesCount = int.from_bytes(reader.read(4), byteorder='little')
+        assembliesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppAssemblyDefinition
+        assembliesCount = int.from_bytes(reader.read(4), byteorder='little')
+        if(version == 24 and imagesOffset+40*imagesCount >= assembliesOffset):
+            return True
+        else:
+            return False
 def outputFields(paths):
     for path in paths:
         with open(path, 'rb') as reader:
@@ -403,7 +575,6 @@ def outputFileStructure(path):
                 for i in range(31):
                     offsetNames[names[2*i]] = offsets[2*i]
                 sortedOffsetNames = sorted(offsetNames, key = offsetNames.get)
-                print(sortedOffsetNames)
                 for x in sortedOffsetNames:
                     stringsToPrint.append(x + ": " + hex(offsetNames[x]) + '\n')
                 writeList(stringsToPrint,offsetFile)
@@ -480,7 +651,7 @@ def outputTypes(paths):
             with open("Types_"+str(path[2:7])+".txt", "w") as typesFile:
                 #Move location to the method string name
                 toPrint = []
-                for i in range(len(types)):
+                for i in range(1):
                     nameIndex = types[i][0]
                     namespaceIndex = types[i][1]
                     fieldStart = types[i][8]
@@ -493,15 +664,11 @@ def outputTypes(paths):
                     toPrint.append(readUntilNullByte(reader))
                     reader.seek(stringOffset + namespaceIndex)
                     toPrint.append(readUntilNullByte(reader))
-                    if i == len(types) - 1:
-                        print(hex(methodStart))
-                        reader.seek(methodsOffset + methodStart,0)
-                        number = int.from_bytes(reader.read(4), byteorder='little')
-                        print(hex(number))
+
                     #We've read in nameIndex and namespaceIndex
                     #Now we will read in some fields/methods
                     fields = getFieldNames(path, (fieldStart*12) + fieldsOffset , field_count*12)
-                    methods = getMethodNames(path, (methodStart*32) + methodsOffset, method_count*32)
+                    methods = getMethodNames(path, (methodStart*32) + methodsOffset, method_count*32, version)
                     #if i == len(types) - 1:
                         #print("value")
                         #print(hex(methods[1][0] + stringOffset))
@@ -546,10 +713,10 @@ args = sys.argv[1:]
 goodArgs = ['m', 'o', 'fields', 'structure', 'types']
 if len(args) == 0 or (len(set(goodArgs) & set(args)) == 0):
     print("usage: python parser.py m [or] o [or] fields [or] structure [or] types")
-    print("The \'types\' flag will output the types with methods and fields to a file")
+    print("The \'types\' flag will output the types with methods and fields to a file(only working for latest version)")
     print("The \'m\' flag will output the methods to a file")
-    print("The \'fields\' flag will output the fields  to a file")
-    print("The \'structure\' flag will output the structure  to a file")
+    print("The \'fields\' flag will output the fields  to a file(only working for latest version)")
+    print("The \'structure\' flag will output the structure  to a file(only working for latest version)")
     print("The \'o\' flag will output the obfuscation status")
     exit(0)
 print("Finding all paths to \"global-metadata.dat\"")
