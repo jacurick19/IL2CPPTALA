@@ -1630,7 +1630,7 @@ def printListToFile(listName, file):
 
 
 def outputObfStatus(paths, quick = False, filePath = None, zipped = False, zipPaths = []):
-
+    total = 0
     numberObfuscated = 0
     if zipped:
         with open("Obfuscation_information.txt", "w") as f:
@@ -1638,6 +1638,7 @@ def outputObfStatus(paths, quick = False, filePath = None, zipped = False, zipPa
                 path = paths[zipPaths.index(zipPath)]
                 f.write(zipPath)
                 f.write(" ")
+                zipPath = zipPath.replace('\n', '')
                 zipObject = zipfile.ZipFile(zipPath, 'r')
                 obf = False
                 if quick == True:
@@ -1647,9 +1648,11 @@ def outputObfStatus(paths, quick = False, filePath = None, zipped = False, zipPa
                 else:
                     obf = checkForObfuscation(path, False, None, zipped, zipObject)
                 if obf:
+                    total += 1
                     f.write("yes\n")
                     numberObfuscated += 1
                 else:
+                    total += 1
                     f.write("no ")
                     f.write(str(checkVersion(path, zipped, zipObject))+'\n')
     else:
@@ -1668,12 +1671,14 @@ def outputObfStatus(paths, quick = False, filePath = None, zipped = False, zipPa
                     obf = checkForObfuscation(path, False, None, zipped)
                 if obf:
                     f.write(". It is obfuscated.\n")
+                    total += 1
                     numberObfuscated += 1
                 else:
+                    total +=1
                     f.write(". It is not obfuscated.\n")
-    return numberObfuscated
+    return total, numberObfuscated
 args = sys.argv[1:]
-goodArgs = ['m', 'o', 'os', 'of', 'o' 'fields', 'structure', 'types', 'defaultPath', 'oz']
+goodArgs = ['m', 'o', 'os', 'of', 'o' 'fields', 'structure', 'types', 'defaultPath', 'oz', '-pf']
 if len(args) == 0:
     print("usage: python parser.py m [or] o [or] fields [or] structure [or] types")
     print("The \'types\' flag will output the types with methods and fields to a file(only working for latest version)")
@@ -1684,12 +1689,23 @@ if len(args) == 0:
     exit(0)
 paths = []
 if 'defaultPath' in args:
+    preName = "../apks/2020.06/"
     pathName = "assets/bin/Data/Managed/Metadata/global-metadata.dat"
-    for fileName in [pathName for name in os.listdir(".") if name.endswith(".zip")]:
+    for fileName in [pathName for name in os.listdir("../apks/2020.06/") if name.endswith(".apk")]:
         paths.append(fileName)
 else:
     print("Finding all paths to \"global-metadata.dat\"")
     paths = glob.glob("./**/global-metadata.dat", recursive = True)
+apkPaths = []
+if '-pf' in args:
+    i = args.index('-pf') + 1
+    while i < len(args):
+        with open(args[i], 'r') as file:
+            lines = file.readlines()
+        for line in lines:
+            apkPaths.append(line)
+        i += 1
+
 if len(paths) == 0:
     print("Error. No paths detected. The file is missing or obfuscated.")
 if('m' in args):
@@ -1748,14 +1764,16 @@ if('of' in args):
     print("Of " + str(numberOfDirectories) +" directories, " + str(numberObfuscated) +" have either missing or obfuscated global-metadata.dat file.")
     print("All files not listed in the output text file should be considered to have either missing or obfuscated global-metadata.dat file.")
 if('oz' in args):
-    print("Outputting obfuscation status of a zipped file")
-    numberOfFiles = 0
-    numberObfuscated = 0
-    numberOfDirectories = 0
+    print("Outputting obfuscation status of a zipped/apk file")
+    total = 0
     for item in os.listdir():
-        if item.endswith(".zip"):
+        if item.endswith(".apk"):
             numberOfFiles += 1
-    numberObfuscated += outputObfStatus(paths, False, None, True, [name for name in os.listdir(".") if name.endswith(".zip")])
-    print("Of " + str(numberOfFiles) +" zip files, " + str(numberObfuscated) +" have either missing or obfuscated global-metadata.dat file.")
+    if apkPaths == [] and "20" in args:
+        apkPaths = [name for name in os.listdir("../apks/2020.06/") if name.endswith(".apk")]
+    if apkPaths == [] and "19" in args:
+        apkPaths = [name for name in os.listdir("../apks/2019.01/") if name.endswith(".apk")]
+    total, numberObfuscated = outputObfStatus(paths, False, None, True, apkPaths)
+    print("Of " + str(total) +" apk files, " + str(numberObfuscated) +" have either missing or obfuscated global-metadata.dat file.")
     print("All files not listed in the output text file should be considered to have either missing or obfuscated global-metadata.dat file.")
 exit(0)
