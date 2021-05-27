@@ -305,6 +305,7 @@ def verifySigniture(path, version, quick = False, typeFilePath = None, zipped = 
         foundAllMethods = False
         foundAllFields = False
         cur = ""
+
         for i in range(len(types)):
             nameIndex = types[i][0]
             if stringOffset + nameIndex > eventsOffset:
@@ -472,6 +473,8 @@ def writeList(lst, file):
 #Get method names from file
 def getMethodNames(path, start, count, version, zipped = False, zipObject = None):
     methods = []
+    print("Version: " + str(version))
+
     if zipped:
         reader = tempfile.TemporaryFile()
         reader.write(zipObject.read(path))
@@ -495,7 +498,7 @@ def getMethodNames(path, start, count, version, zipped = False, zipObject = None
                 reader.seek(14, 1)
                 method.append(int.from_bytes(reader.read(2), byteorder='little'))
                 methods.append(method)
-        if version == 24:
+        if version <= 24:
             Il2CppMethodDefinitionSize = 56
             for i in range(int(count/Il2CppMethodDefinitionSize)):
                 method = []
@@ -521,6 +524,8 @@ def getMethodNames(path, start, count, version, zipped = False, zipObject = None
                 methods.append(method)
         reader.close()
     else:
+        print("Version: " + str(version))
+
         with open(path, 'rb') as reader:
             #Move reading location to the start of the structs
             reader.seek(start, 0)
@@ -543,7 +548,7 @@ def getMethodNames(path, start, count, version, zipped = False, zipObject = None
                     reader.seek(14, 1)
                     method.append(int.from_bytes(reader.read(2), byteorder='little'))
                     methods.append(method)
-            if version == 24:
+            if version <= 24:
                 Il2CppMethodDefinitionSize = 56
                 for i in range(int(count/Il2CppMethodDefinitionSize)):
                     method = []
@@ -556,6 +561,7 @@ def getMethodNames(path, start, count, version, zipped = False, zipObject = None
                     method.append(int.from_bytes(reader.read(2), byteorder='little'))
                     methods.append(method)
             if version == 24.1:
+                print(str(count))
                 Il2CppMethodDefinitionSize = 52
                 for i in range(int(count/Il2CppMethodDefinitionSize)):
                     method = []
@@ -584,7 +590,7 @@ def getSizeOfIl2CppFieldDefinition(version):
         return 3*4
 
 #Get method names from file
-def getFieldNames(path, start, count, zipped, zipObject):
+def getFieldNames(path, start, count, zipped = False, zipObject = None):
     fields = []
     if zipped:
         reader = zipObject.open(path, 'r')
@@ -670,7 +676,6 @@ def getTypes(path, start, count, version, zipped = False, zipObject = None):
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
                 fields.append(field)
         if(version > 24.1 and version <= 24.4):
-
             for i in range(int(count/(23*4))):
                 field = []
                 field.append(int.from_bytes(reader.read(4), byteorder='little')) #0
@@ -704,14 +709,12 @@ def getTypes(path, start, count, version, zipped = False, zipObject = None):
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
                 fields.append(field)
         if(version > 24 and version <= 24.1):
-
             for i in range(int(count/(25*4))):
                 field = []
                 field.append(int.from_bytes(reader.read(4), byteorder='little')) #0
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
                 reader.seek(4,1)
-
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
                 field.append(int.from_bytes(reader.read(4), byteorder='little')) #4
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
@@ -740,17 +743,19 @@ def getTypes(path, start, count, version, zipped = False, zipObject = None):
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
                 fields.append(field)
-        if version == 24:
-            for i in range(int(count/(23*4))):
+        if version <= 24 and version > 22:
+            for i in range(int(count/(26*4))):
                 field = []
                 field.append(int.from_bytes(reader.read(4), byteorder='little')) #0
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
                 reader.seek(4,1)
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                reader.seek(4,1)
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
                 field.append(int.from_bytes(reader.read(4), byteorder='little')) #4
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
-
+                reader.seek(4,1)
+                reader.seek(4,1)
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
@@ -773,6 +778,128 @@ def getTypes(path, start, count, version, zipped = False, zipObject = None):
 
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                fields.append(field)
+
+        if version <=22 and version >= 21:
+            for i in range(int(count/(30*4))):
+                field = []
+                field.append(int.from_bytes(reader.read(4), byteorder='little')) #0
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                reader.seek(4,1)
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                reader.seek(4,1)
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                field.append(int.from_bytes(reader.read(4), byteorder='little')) #4
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                reader.seek(4,1)
+                reader.seek(4,1)
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                field.append(int.from_bytes(reader.read(4), byteorder='little')) #9
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                reader.seek(4,1)
+                reader.seek(4,1)
+                reader.seek(4,1)
+                reader.seek(4,1)
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                field.append(int.from_bytes(reader.read(4), byteorder='little')) #14
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                fields.append(field)
+
+        if version < 21 and version >= 19:
+            for i in range(int(count/(28*4))):
+                field = []
+                field.append(int.from_bytes(reader.read(4), byteorder='little')) #0
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                reader.seek(4,1)
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                reader.seek(4,1)
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                field.append(int.from_bytes(reader.read(4), byteorder='little')) #4
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                reader.seek(4,1)
+                reader.seek(4,1)
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                field.append(int.from_bytes(reader.read(4), byteorder='little')) #9
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                reader.seek(4,1)
+                reader.seek(4,1)
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                field.append(int.from_bytes(reader.read(4), byteorder='little')) #14
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                fields.append(field)
+
+        if version < 19:
+            for i in range(int(count/(28*4))):
+                field = []
+                field.append(int.from_bytes(reader.read(4), byteorder='little')) #0
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                reader.seek(4,1)
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                reader.seek(4,1)
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                field.append(int.from_bytes(reader.read(4), byteorder='little')) #4
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                reader.seek(4,1)
+                reader.seek(4,1)
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                field.append(int.from_bytes(reader.read(4), byteorder='little')) #9
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                reader.seek(4,1)
+                reader.seek(4,1)
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                field.append(int.from_bytes(reader.read(4), byteorder='little')) #14
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+
+                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                fields.append(field)
         return fields
 
     else:
@@ -919,126 +1046,128 @@ def getTypes(path, start, count, version, zipped = False, zipObject = None):
 
                     field.append(int.from_bytes(reader.read(4), byteorder='little'))
                     field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    fields.append(field)
+            if version <=22 and version >= 21:
+                for i in range(int(count/(30*4))):
+                    field = []
+                    field.append(int.from_bytes(reader.read(4), byteorder='little')) #0
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    reader.seek(4,1)
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    reader.seek(4,1)
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little')) #4
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    reader.seek(4,1)
+                    reader.seek(4,1)
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
 
-                    if version <=22 and version >= 21:
-                        for i in range(int(count/(30*4))):
-                            field = []
-                            field.append(int.from_bytes(reader.read(4), byteorder='little')) #0
-                            field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                            reader.seek(4,1)
-                            field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                            reader.seek(4,1)
-                            field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                            field.append(int.from_bytes(reader.read(4), byteorder='little')) #4
-                            field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                            reader.seek(4,1)
-                            reader.seek(4,1)
-                            field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little')) #9
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    reader.seek(4,1)
+                    reader.seek(4,1)
+                    reader.seek(4,1)
+                    reader.seek(4,1)
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little')) #14
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
 
-                            field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                            field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                            field.append(int.from_bytes(reader.read(4), byteorder='little')) #9
-                            field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                            reader.seek(4,1)
-                            reader.seek(4,1)
-                            reader.seek(4,1)
-                            reader.seek(4,1)
-                            field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                            field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                            field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                            field.append(int.from_bytes(reader.read(4), byteorder='little')) #14
-                            field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
 
-                            field.append(int.from_bytes(reader.read(2), byteorder='little'))
-                            field.append(int.from_bytes(reader.read(2), byteorder='little'))
-                            field.append(int.from_bytes(reader.read(2), byteorder='little'))
-                            field.append(int.from_bytes(reader.read(2), byteorder='little'))
-                            field.append(int.from_bytes(reader.read(2), byteorder='little'))
-                            field.append(int.from_bytes(reader.read(2), byteorder='little'))
-                            field.append(int.from_bytes(reader.read(2), byteorder='little'))
-                            field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    fields.append(field)
+            if version < 21 and version >= 19:
+                for i in range(int(count/(28*4))):
+                    field = []
+                    field.append(int.from_bytes(reader.read(4), byteorder='little')) #0
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    reader.seek(4,1)
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    reader.seek(4,1)
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little')) #4
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    reader.seek(4,1)
+                    reader.seek(4,1)
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
 
-                            field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                            field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                        if version < 21 and version >= 19:
-                            for i in range(int(count/(28*4))):
-                                field = []
-                                field.append(int.from_bytes(reader.read(4), byteorder='little')) #0
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                                reader.seek(4,1)
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                                reader.seek(4,1)
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(4), byteorder='little')) #4
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                                reader.seek(4,1)
-                                reader.seek(4,1)
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little')) #9
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    reader.seek(4,1)
+                    reader.seek(4,1)
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little')) #14
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
 
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(4), byteorder='little')) #9
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                                reader.seek(4,1)
-                                reader.seek(4,1)
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(4), byteorder='little')) #14
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
 
-                                field.append(int.from_bytes(reader.read(2), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(2), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(2), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(2), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(2), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(2), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(2), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    fields.append(field)
+            if version < 19:
+                for i in range(int(count/(28*4))):
+                    field = []
+                    field.append(int.from_bytes(reader.read(4), byteorder='little')) #0
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    reader.seek(4,1)
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    reader.seek(4,1)
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little')) #4
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    reader.seek(4,1)
+                    reader.seek(4,1)
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
 
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                        if version < 19:
-                            for i in range(int(count/(28*4))):
-                                field = []
-                                field.append(int.from_bytes(reader.read(4), byteorder='little')) #0
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                                reader.seek(4,1)
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                                reader.seek(4,1)
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(4), byteorder='little')) #4
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                                reader.seek(4,1)
-                                reader.seek(4,1)
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little')) #9
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    reader.seek(4,1)
+                    reader.seek(4,1)
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little')) #14
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
 
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(4), byteorder='little')) #9
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                                reader.seek(4,1)
-                                reader.seek(4,1)
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(4), byteorder='little')) #14
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(2), byteorder='little'))
 
-                                field.append(int.from_bytes(reader.read(2), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(2), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(2), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(2), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(2), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(2), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(2), byteorder='little'))
-                                field.append(int.from_bytes(reader.read(2), byteorder='little'))
-
-                                field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                    fields.append(field)
 
 
-
-    return fields
+        return fields
 
 #Todo: future optimization would be to only check for the head of the directory chain
 #i.e. only look for "assets" on android file or "il2cpp" on windows file
@@ -1180,12 +1309,11 @@ def isVersion24point1(path, zipped = False, zipObject = None):
         interfaceOffsetsCount = int.from_bytes(reader.read(4), byteorder='little')
         typeDefinitionsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppTypeDefinition
         typeDefinitionsCount = int.from_bytes(reader.read(4), byteorder='little')
-        imagesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppImageDefinition
-        imagesCount = int.from_bytes(reader.read(4), byteorder='little')
-        assembliesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppAssemblyDefinition
-        assembliesCount = int.from_bytes(reader.read(4), byteorder='little')
         reader.close()
-        if(version == 24 and imagesOffset+40*imagesCount >= assembliesOffset):
+        if(version == 24 and methodsCount % 52 == 0):
+            if methodsCount % 56 == 0:
+                with open("AnomalyFile.txt", "a") as af:
+                    af.write("This file may be v24 or v 24.1. Results for it are unreliable. "+ str(zipObject.infoList()) + "\n")
             return True
         else:
             return False
@@ -1204,7 +1332,7 @@ def isVersion24point1(path, zipped = False, zipObject = None):
         propertiesCount = int.from_bytes(reader.read(4), byteorder='little')
         methodsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppMethodDefinition
         methodsCount = int.from_bytes(reader.read(4), byteorder='little')
-        arameterDefaultValuesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppParameterDefaultValue
+        parameterDefaultValuesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppParameterDefaultValue
         parameterDefaultValuesCount = int.from_bytes(reader.read(4), byteorder='little')
         fieldDefaultValuesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppFieldDefaultValue
         fieldDefaultValuesCount = int.from_bytes(reader.read(4), byteorder='little')
@@ -1232,11 +1360,10 @@ def isVersion24point1(path, zipped = False, zipObject = None):
         interfaceOffsetsCount = int.from_bytes(reader.read(4), byteorder='little')
         typeDefinitionsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppTypeDefinition
         typeDefinitionsCount = int.from_bytes(reader.read(4), byteorder='little')
-        imagesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppImageDefinition
-        imagesCount = int.from_bytes(reader.read(4), byteorder='little')
-        assembliesOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppAssemblyDefinition
-        assembliesCount = int.from_bytes(reader.read(4), byteorder='little')
-        if(version == 24 and imagesOffset+40*imagesCount >= assembliesOffset):
+        if(version == 24 and methodsCount % 52 == 0):
+            if methodsCount % 56 == 0:
+                with open("AnomalyFile.txt", "a") as af:
+                    af.write("This file may be v24 or v 24.1. Results for it are unreliable. "+ path + "\n")
             return True
         else:
             return False
