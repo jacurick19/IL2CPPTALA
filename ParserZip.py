@@ -473,8 +473,6 @@ def writeList(lst, file):
 #Get method names from file
 def getMethodNames(path, start, count, version, zipped = False, zipObject = None):
     methods = []
-    print("Version: " + str(version))
-
     if zipped:
         reader = tempfile.TemporaryFile()
         reader.write(zipObject.read(path))
@@ -524,7 +522,6 @@ def getMethodNames(path, start, count, version, zipped = False, zipObject = None
                 methods.append(method)
         reader.close()
     else:
-        print("Version: " + str(version))
 
         with open(path, 'rb') as reader:
             #Move reading location to the start of the structs
