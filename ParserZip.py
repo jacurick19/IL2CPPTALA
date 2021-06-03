@@ -335,9 +335,6 @@ def verifySigniture(path, version, quick = False, typeFilePath = None, zipped = 
                     reader.seek(stringOffset + nameIndex)
                     listOfFieldNames.append(readUntilNullByte(reader))
                 foundAllFields = True
-                print(listOfFieldNames)
-                if list("source") in listOfFieldNames:
-                    print(listOfFieldNames)
                 for field in fieldsSeek:
                     foundAllFields = foundAllFields and field in listOfFieldNames
             if foundAllFields:
