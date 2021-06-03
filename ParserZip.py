@@ -204,15 +204,19 @@ def readUntilNullByte(file):
     word = []
     while True:
         b = file.read(1)
-        #Ignore errors for now
-        try:
-            b = b.decode("utf-8", errors="strict")
-        except UnicodeError:
-            print("There has been an error trying to parse " + file.name)
-        if b != '\0':
+        if b != b'\x00' and b != b'':
             word.append(b)
+            if(len(word) > 50):
+                print(word[len(word) - 1])
         else:
             break
+    word = b''.join(word)
+    try:
+        word = word.decode("utf-8", errors = "strict")
+    except UnicodeError:
+        print("Error")
+        return ['\0']
+    word = [c for c in word]
     return word
 
 #verify that.ctor, the IL constructor, is the first method listed.
@@ -267,7 +271,7 @@ def verifySigniture(path, version, quick = False, typeFilePath = None, zipped = 
         typeDefinitionsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppTypeDefinition
         typeDefinitionsCount = int.from_bytes(reader.read(4), byteorder='little')
         version = checkVersion(path, zipped, zipObject)
-
+        totalC = 0
         #Move the reading location to the first method
         if quick:
             methods = getMethodNames(path, methodsOffset, methodsCount, version, zipped, zipObject)
@@ -284,9 +288,9 @@ def verifySigniture(path, version, quick = False, typeFilePath = None, zipped = 
         start = time.perf_counter()
         types = getTypes(path, typeDefinitionsOffset, typeDefinitionsCount, version, zipped, zipObject)
         if typeFilePath == None:
-            nameSeek = list("RuntimeClassHandle")
-            methodsSeek = [list(".ctor"), list("get_Value"), list("GetHashCode")]
-            fieldsSeek = [list("value")]
+            nameSeek = list("StringReader")
+            methodsSeek = [list(".ctor")]
+            fieldsSeek = [list("source"), list("sourceLength"), list("nextChar")]
         else:
             with open(typeFilePath) as jsonFile:
                 file = json.load(jsonFile)
@@ -307,11 +311,16 @@ def verifySigniture(path, version, quick = False, typeFilePath = None, zipped = 
         cur = ""
 
         for i in range(len(types)):
+            #print(str(i) + " " + str(len(types)))
             nameIndex = types[i][0]
             if stringOffset + nameIndex > eventsOffset:
                 return False
             reader.seek(stringOffset + nameIndex)
             cur = readUntilNullByte(reader)
+            if cur == ['\0']:
+                print("Version :" + str(version))
+                print("Info: " + str(zipObject.filename))
+                return False
             if cur == nameSeek:
                 foundName = True
             if foundName:
@@ -326,6 +335,9 @@ def verifySigniture(path, version, quick = False, typeFilePath = None, zipped = 
                     reader.seek(stringOffset + nameIndex)
                     listOfFieldNames.append(readUntilNullByte(reader))
                 foundAllFields = True
+                print(listOfFieldNames)
+                if list("source") in listOfFieldNames:
+                    print(listOfFieldNames)
                 for field in fieldsSeek:
                     foundAllFields = foundAllFields and field in listOfFieldNames
             if foundAllFields:
@@ -347,7 +359,6 @@ def verifySigniture(path, version, quick = False, typeFilePath = None, zipped = 
                 break
 
         reader.close()
-
         return foundAllMethods and foundAllFields and foundName
     else:
         with open(path, 'rb') as reader:
@@ -408,9 +419,9 @@ def verifySigniture(path, version, quick = False, typeFilePath = None, zipped = 
                 return False
             types = getTypes(path, typeDefinitionsOffset, typeDefinitionsCount, version)
             if typeFilePath == None:
-                nameSeek = list("RuntimeClassHandle")
-                methodsSeek = [list(".ctor"), list("get_Value"), list("GetHashCode")]
-                fieldsSeek = [list("value")]
+                nameSeek = list("StringReader")
+                methodsSeek = [list(".ctor")]
+                fieldsSeek = [list("source"), list("nextChar"), list("sourceLength")]
             else:
                 with open(typeFilePath) as jsonFile:
                     file = json.load(jsonFile)
@@ -577,7 +588,7 @@ def getSizeOfIl2CppMethodDefinition(version):
         return 8*4
     if version == 24.1:
         return 13*4
-    if version == 24:
+    if version <= 24:
         return 14*4
 
 def getSizeOfIl2CppFieldDefinition(version):
@@ -598,11 +609,12 @@ def getFieldNames(path, start, count, zipped = False, zipObject = None):
         #I only care about the first int, the StringIndex nameIndex,
         #The second int, the typeIndexe,  may be interesting soon
 
-        for i in range(int(count/12)):
+        for i in range(int(count/16)):
             field = []
             field.append(int.from_bytes(reader.read(4), byteorder='little'))
             field.append(int.from_bytes(reader.read(4), byteorder='little'))
             field.append(int.from_bytes(reader.read(4), byteorder='little'))
+            reader.seek(4,1)
             fields.append(field)
 
         reader.close()
@@ -791,15 +803,16 @@ def getTypes(path, start, count, version, zipped = False, zipObject = None):
                 reader.seek(4,1)
                 reader.seek(4,1)
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
+                reader.seek(4,1)
+                reader.seek(4,1)
+                reader.seek(4,1)
+                reader.seek(4,1)
 
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
+
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
                 field.append(int.from_bytes(reader.read(4), byteorder='little')) #9
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
-                reader.seek(4,1)
-                reader.seek(4,1)
-                reader.seek(4,1)
-                reader.seek(4,1)
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
                 field.append(int.from_bytes(reader.read(4), byteorder='little'))
@@ -1306,12 +1319,26 @@ def isVersion24point1(path, zipped = False, zipObject = None):
         interfaceOffsetsCount = int.from_bytes(reader.read(4), byteorder='little')
         typeDefinitionsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppTypeDefinition
         typeDefinitionsCount = int.from_bytes(reader.read(4), byteorder='little')
-        reader.close()
-        if(version == 24 and methodsCount % 52 == 0):
-            if methodsCount % 56 == 0:
-                with open("AnomalyFile.txt", "a") as af:
-                    af.write("This file may be v24 or v 24.1. Results for it are unreliable. "+ str(zipObject.infoList()) + "\n")
-            return True
+        ignoreRGCTX = reader.read(8)
+        imagesOffset = int.from_bytes(reader.read(4), byteorder = 'little')
+        imagesCount = int.from_bytes(reader.read(4), byteorder = 'little')
+        reader.seek(imagesOffset, 0)
+        if(version == 24 and imagesCount % 40 == 0):
+            if imagesCount % 32 != 0:
+                return True
+            print("Might be version 24.1")
+            suspected = False
+            sizeOfVersion24ImageStruct = 32
+            numberOfImageDefs = imagesCount / sizeOfVersion24ImageStruct
+            for x in range(int(numberOfImageDefs)):
+                reader.seek(7*4, 1)
+                token = int.from_bytes(reader.read(4), byteorder = 'little')
+                if token != 1:
+                    reader.close()
+                    print("Version 24.1 verified")
+                    return True
+            reader.close()
+            return suspected
         else:
             return False
     with open(path, 'rb') as reader:
@@ -1357,8 +1384,11 @@ def isVersion24point1(path, zipped = False, zipObject = None):
         interfaceOffsetsCount = int.from_bytes(reader.read(4), byteorder='little')
         typeDefinitionsOffset = int.from_bytes(reader.read(4), byteorder='little')             #         Il2CppTypeDefinition
         typeDefinitionsCount = int.from_bytes(reader.read(4), byteorder='little')
-        if(version == 24 and methodsCount % 52 == 0):
-            if methodsCount % 56 == 0:
+        ignoreRGCTX = reader.read(8)
+        imagesOffset = int.from_bytes(reader.read(4), byteorder = 'little')
+        imagesCount = int.from_bytes(reader.read(4), byteorder = 'little')
+        if(version == 24 and methodsCount % 52 == 0 and imagesCount % 40 == 0):
+            if methodsCount % 56 == 0 and imagesCount % 32 == 0:
                 with open("AnomalyFile.txt", "a") as af:
                     af.write("This file may be v24 or v 24.1. Results for it are unreliable. "+ path + "\n")
             return True
@@ -1757,12 +1787,13 @@ def outputObfStatus(paths, quick = False, filePath = None, zipped = False, zipPa
     total = 0
     numberObfuscated = 0
     if zipped:
-        with open("Obfuscation_information.txt", "w") as f:
-            for zipPath in zipPaths:
+        for zipPath in zipPaths:
+            with open("Obfuscation_information.txt", "a") as f:
                 path = paths[zipPaths.index(zipPath)]
-                f.write(zipPath)
-                f.write(" ")
                 zipPath = zipPath.replace('\n', '')
+                f.write(zipPath)
+                f.write(' ')
+                print(zipPath)
                 zipObject = zipfile.ZipFile(zipPath, 'r')
                 obf = False
                 if quick == True:
@@ -1773,12 +1804,15 @@ def outputObfStatus(paths, quick = False, filePath = None, zipped = False, zipPa
                     obf = checkForObfuscation(path, False, None, zipped, zipObject)
                 if obf:
                     total += 1
-                    f.write("yes\n")
+                    f.write("yes ")
+                    f.write(str(checkVersion(path, zipped, zipObject)) + '\n')
                     numberObfuscated += 1
                 else:
                     total += 1
                     f.write("no ")
                     f.write(str(checkVersion(path, zipped, zipObject))+'\n')
+                if total % 250 == 0:
+                    print(str(total))
     else:
         with open("Obfuscation_information.txt", "w") as f:
             for path in paths:
@@ -1816,7 +1850,7 @@ if 'defaultPath' in args:
     preName = "../apks/2020.06/"
     pathName = "assets/bin/Data/Managed/Metadata/global-metadata.dat"
     for fileName in [pathName for name in os.listdir("../apks/2020.06/") if name.endswith(".apk")]:
-        paths.append(fileName)
+        paths.append(pathName)
 else:
     print("Finding all paths to \"global-metadata.dat\"")
     paths = glob.glob("./**/global-metadata.dat", recursive = True)
@@ -1897,6 +1931,14 @@ if('oz' in args):
         apkPaths = [name for name in os.listdir("../apks/2020.06/") if name.endswith(".apk")]
     if apkPaths == [] and "19" in args:
         apkPaths = [name for name in os.listdir("../apks/2019.01/") if name.endswith(".apk")]
+    newApks = []
+    if "20" in args:
+        for p in apkPaths:
+            newApks.append("../apks/2020.06/" + p + ".apk")
+    if "19" in args:
+        for p in apkPaths:
+            newApks.append("../apks/2019.01/" + p + ".apk")
+    apkPaths =newApks
     total, numberObfuscated = outputObfStatus(paths, False, None, True, apkPaths)
     print("Of " + str(total) +" apk files, " + str(numberObfuscated) +" have either missing or obfuscated global-metadata.dat file.")
     print("All files not listed in the output text file should be considered to have either missing or obfuscated global-metadata.dat file.")
